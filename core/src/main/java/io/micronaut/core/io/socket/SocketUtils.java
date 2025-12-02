@@ -21,6 +21,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Random;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 /**
  * Utility methods for dealing with sockets.
@@ -86,7 +88,7 @@ public class SocketUtils {
      * @return True if it is
      */
     public static boolean isTcpPortAvailable(int currentPort) {
-        try (Socket socket = new Socket()) {
+        try (SSLSocket socket = (SSLSocket) SSLSocketFactory.getDefault().createSocket()) {
             socket.connect(new InetSocketAddress(InetAddress.getLocalHost(), currentPort), 20);
             return false;
         } catch (Throwable e) {
