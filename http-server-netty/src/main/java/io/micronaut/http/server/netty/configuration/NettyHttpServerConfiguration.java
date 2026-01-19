@@ -23,8 +23,8 @@ import io.micronaut.context.annotation.Replaces;
 import io.micronaut.context.annotation.Requires;
 import io.micronaut.core.annotation.Experimental;
 import io.micronaut.core.annotation.Internal;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+import io.micronaut.core.annotation.NextMajorVersion;
 import io.micronaut.core.convert.format.ReadableBytes;
 import io.micronaut.core.util.StringUtils;
 import io.micronaut.http.netty.channel.ChannelPipelineListener;
@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Allows configuring Netty within {@link io.micronaut.http.server.netty.NettyHttpServer}.
@@ -222,6 +223,8 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
     private int formMaxFields = DEFAULT_FORM_MAX_FIELDS;
     private int formMaxBufferedBytes = DEFAULT_FORM_MAX_BUFFERED_BYTES;
     private boolean requestDecompressionEnabled = true;
+    @NextMajorVersion("Move to DecoderQuirk enum once it becomes mandatory")
+    private Set<String> formDecoderQuirks = Collections.emptySet();
 
     /**
      * Default empty constructor.
@@ -253,7 +256,6 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
      * @return Sets the server type.
      * @see HttpServerType
      */
-    @NonNull
     public HttpServerType getServerType() {
         return serverType;
     }
@@ -518,7 +520,7 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
      * @return The file type handler configuration.
      * @since 3.1.0
      */
-    public @NonNull FileTypeHandlerConfiguration getFileTypeHandlerConfiguration() {
+    public FileTypeHandlerConfiguration getFileTypeHandlerConfiguration() {
         return fileTypeHandlerConfiguration;
     }
 
@@ -528,7 +530,7 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
      * @since 3.1.0
      */
     @Inject
-    public void setFileTypeHandlerConfiguration(@NonNull FileTypeHandlerConfiguration fileTypeHandlerConfiguration) {
+    public void setFileTypeHandlerConfiguration(FileTypeHandlerConfiguration fileTypeHandlerConfiguration) {
         if (fileTypeHandlerConfiguration != null) {
             this.fileTypeHandlerConfiguration = fileTypeHandlerConfiguration;
         }
@@ -871,6 +873,30 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
      */
     public void setFormMaxBufferedBytes(int formMaxBufferedBytes) {
         this.formMaxBufferedBytes = formMaxBufferedBytes;
+    }
+
+    /**
+     * The decoder quirks for the
+     * <a href="https://github.com/netty-contrib/codec-multipart/">next-generation multipart
+     * parser</a>, if present. No quirks by default.
+     *
+     * @return The decoder quirks
+     */
+    @Experimental
+    public Set<String> getFormDecoderQuirks() {
+        return formDecoderQuirks;
+    }
+
+    /**
+     * The decoder quirks for the
+     * <a href="https://github.com/netty-contrib/codec-multipart/">next-generation multipart
+     * parser</a>, if present. No quirks by default.
+     *
+     * @param formDecoderQuirks The decoder quirks
+     */
+    @Experimental
+    public void setFormDecoderQuirks(Set<String> formDecoderQuirks) {
+        this.formDecoderQuirks = formDecoderQuirks;
     }
 
     /**
@@ -1310,7 +1336,6 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
             /**
              * @return True if the cache control should be public
              */
-            @NonNull
             public boolean getPublic() {
                 return publicCache;
             }
@@ -1339,7 +1364,6 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
             this.name = name;
         }
 
-        @NonNull
         @Override
         public String getName() {
             return name;
@@ -1464,7 +1488,7 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
         }
 
         @Override
-        public @NonNull List<String> getTransport() {
+        public List<String> getTransport() {
             return transport == null ? EventLoopGroupConfiguration.super.getTransport() : transport;
         }
 
@@ -1479,7 +1503,7 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
          *
          * @param transport The available transports, in order of preference
          */
-        public void setTransport(@NonNull List<String> transport) {
+        public void setTransport(List<String> transport) {
             this.transport = transport;
         }
 
@@ -1595,7 +1619,7 @@ public class NettyHttpServerConfiguration extends HttpServerConfiguration {
          * The address family of this listener.
          * @param family The address family of this listener.
          */
-        public void setFamily(@NonNull Family family) {
+        public void setFamily(Family family) {
             Objects.requireNonNull(family, "family");
             this.family = family;
         }

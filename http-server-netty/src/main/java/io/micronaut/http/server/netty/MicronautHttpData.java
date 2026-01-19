@@ -16,7 +16,6 @@
 package io.micronaut.http.server.netty;
 
 import io.micronaut.core.annotation.Internal;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import io.micronaut.core.util.SupplierUtil;
 import io.micronaut.http.server.HttpServerConfiguration;
@@ -280,6 +279,7 @@ public abstract sealed class MicronautHttpData<D extends HttpData> extends Abstr
             } catch (IOException e) {
                 LOG.warn("Failed to close temp file channel", e);
             }
+            channel = null;
         }
         if (path != null) {
             try {
@@ -287,21 +287,23 @@ public abstract sealed class MicronautHttpData<D extends HttpData> extends Abstr
             } catch (IOException e) {
                 LOG.warn("Failed to delete temp file", e);
             }
+            path = null;
         }
         for (Chunk chunk : chunks) {
             chunk.release();
         }
+        chunks.clear();
         if (mmapSegments != null) {
             for (ByteBuf segment : mmapSegments) {
                 segment.release();
             }
+            mmapSegments = null;
         }
     }
 
     @Override
     public void setContent(ByteBuf buffer) throws IOException {
         dealloc0();
-        chunks.clear();
 
         Chunk ch = new Chunk(0);
         chunks.add(ch);
@@ -475,7 +477,7 @@ public abstract sealed class MicronautHttpData<D extends HttpData> extends Abstr
     }
 
     @Override
-    public int compareTo(@NonNull InterfaceHttpData o) {
+    public int compareTo(InterfaceHttpData o) {
         throw new UnsupportedOperationException();
     }
 
@@ -750,7 +752,7 @@ public abstract sealed class MicronautHttpData<D extends HttpData> extends Abstr
         }
 
         @Override
-        public int read(@NonNull byte[] b, int off, int len) throws IOException {
+        public int read(byte[] b, int off, int len) throws IOException {
             if (!buf.isReadable()) {
                 buf.release();
 

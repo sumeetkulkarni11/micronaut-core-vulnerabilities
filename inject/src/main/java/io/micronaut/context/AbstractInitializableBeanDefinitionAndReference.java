@@ -20,7 +20,6 @@ import io.micronaut.context.condition.ConditionContext;
 import io.micronaut.context.conditions.MatchesDynamicCondition;
 import io.micronaut.context.exceptions.BeanInstantiationException;
 import io.micronaut.core.annotation.AnnotationMetadata;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.inject.BeanDefinition;
@@ -46,26 +45,26 @@ public abstract class AbstractInitializableBeanDefinitionAndReference<T> extends
     protected AbstractInitializableBeanDefinitionAndReference(Class<T> beanType,
                                                               @Nullable MethodOrFieldReference constructor,
                                                               @Nullable AnnotationMetadata annotationMetadata,
-                                                              @Nullable MethodReference[] methodInjection,
-                                                              @Nullable FieldReference[] fieldInjection,
-                                                              @Nullable AnnotationReference[] annotationInjection,
+                                                              MethodReference @Nullable [] methodInjection,
+                                                              FieldReference @Nullable [] fieldInjection,
+                                                              AnnotationReference @Nullable [] annotationInjection,
                                                               @Nullable ExecutableMethodsDefinition<T> executableMethodsDefinition,
-                                                              @Nullable Map<String, Argument<?>[]> typeArgumentsMap,
-                                                              @NonNull PrecalculatedInfo precalculatedInfo) {
+                                                              Map<String, Argument<?> @Nullable []> typeArgumentsMap,
+ PrecalculatedInfo precalculatedInfo) {
         this(beanType, constructor, annotationMetadata, methodInjection, fieldInjection, annotationInjection, executableMethodsDefinition, typeArgumentsMap, precalculatedInfo, null, null, null);
     }
 
     protected AbstractInitializableBeanDefinitionAndReference(Class<T> beanType,
                                                               @Nullable MethodOrFieldReference constructor,
                                                               @Nullable AnnotationMetadata annotationMetadata,
-                                                              @Nullable MethodReference[] methodInjection,
-                                                              @Nullable FieldReference[] fieldInjection,
-                                                              @Nullable AnnotationReference[] annotationInjection,
+                                                              MethodReference @Nullable [] methodInjection,
+                                                              FieldReference @Nullable [] fieldInjection,
+                                                              AnnotationReference @Nullable [] annotationInjection,
                                                               @Nullable ExecutableMethodsDefinition<T> executableMethodsDefinition,
-                                                              @Nullable Map<String, Argument<?>[]> typeArgumentsMap,
-                                                              @NonNull PrecalculatedInfo precalculatedInfo,
-                                                              @Nullable Condition[] preLoadConditions,
-                                                              @Nullable Condition[] postLoadConditions,
+                                                              Map<String, Argument<?> @Nullable []> typeArgumentsMap,
+ PrecalculatedInfo precalculatedInfo,
+                                                              Condition @Nullable [] preLoadConditions,
+                                                              Condition @Nullable [] postLoadConditions,
                                                               @Nullable Throwable failedInitialization) {
         super(beanType, constructor, annotationMetadata, methodInjection, fieldInjection, annotationInjection, executableMethodsDefinition, typeArgumentsMap, precalculatedInfo);
         this.failedInitialization = failedInitialization;

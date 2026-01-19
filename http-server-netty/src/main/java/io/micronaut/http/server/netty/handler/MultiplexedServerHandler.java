@@ -17,7 +17,6 @@ package io.micronaut.http.server.netty.handler;
 
 import io.micronaut.buffer.netty.NettyReadBufferFactory;
 import io.micronaut.core.annotation.Internal;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import io.micronaut.core.io.buffer.ReadBuffer;
 import io.micronaut.core.util.NativeImageUtils;
@@ -77,7 +76,7 @@ abstract class MultiplexedServerHandler {
      */
     abstract void flush();
 
-    private @NonNull NettyByteBodyFactory byteBodyFactory() {
+    private NettyByteBodyFactory byteBodyFactory() {
         return new NettyByteBodyFactory(ctx.channel());
     }
 
@@ -95,7 +94,8 @@ abstract class MultiplexedServerHandler {
         private Object attachment;
 
         private boolean requestAccepted;
-        private boolean responseDone;
+        private boolean finished;
+        private boolean reset;
         private Compressor.Session compressionSession;
 
         MultiplexedStream(int streamId) {
@@ -228,17 +228,14 @@ abstract class MultiplexedServerHandler {
          * @param e The exception that should be forwarded to the stream consumer
          */
         final void onRstStreamRead(Exception e) {
+            reset = true;
             if (streamer != null) {
                 streamer.error(e);
             }
-            finish();
+            disposeWriteSide();
         }
 
-        private boolean finish() {
-            if (responseDone) {
-                return false;
-            }
-            responseDone = true;
+        private void disposeWriteSide() {
             if (writerUpstream != null) {
                 writerUpstream.allowDiscard();
                 writerUpstream.disregardBackpressure();
@@ -246,14 +243,22 @@ abstract class MultiplexedServerHandler {
             if (compressionSession != null) {
                 compressionSession.discard();
             }
+        }
+
+        private boolean finish() {
+            if (finished) {
+                return false;
+            }
+            finished = true;
+            disposeWriteSide();
             requestHandler.responseWritten(attachment);
             return true;
         }
 
         @Override
-        public void write(@NonNull HttpResponse response, @NonNull ByteBody body) {
+        public void write(HttpResponse response, ByteBody body) {
             body.touch();
-            if (responseDone) {
+            if (finished) {
                 body.touch();
                 // stream reset
                 return;
@@ -310,10 +315,14 @@ abstract class MultiplexedServerHandler {
                     }
 
                     private void complete0() {
-                        if (!responseDone) {
-                            writeData(Unpooled.EMPTY_BUFFER, true, endPromise(response));
+                        if (!finished) {
+                            if (!reset) {
+                                writeData(Unpooled.EMPTY_BUFFER, true, endPromise(response));
+                            }
                             if (finish()) {
-                                flush();
+                                if (!reset) {
+                                    flush();
+                                }
                             }
                         }
                     }
@@ -344,10 +353,15 @@ abstract class MultiplexedServerHandler {
                 return;
             }
 
-            if (responseDone) {
+            if (finished) {
+                upstream.allowDiscard();
+                upstream.disregardBackpressure();
+                return;
+            } else if (reset) {
                 // connection closed?
-                writerUpstream.allowDiscard();
-                writerUpstream.disregardBackpressure();
+                upstream.allowDiscard();
+                upstream.disregardBackpressure();
+                finish();
                 return;
             }
 
@@ -360,15 +374,19 @@ abstract class MultiplexedServerHandler {
         }
 
         @Override
-        public void writeHeadResponse(@NonNull HttpResponse response) {
+        public void writeHeadResponse(HttpResponse response) {
             response.headers().remove(HttpHeaderNames.TRANSFER_ENCODING);
             writeFull(response, Unpooled.EMPTY_BUFFER);
         }
 
-        private void writeFull(@NonNull HttpResponse response, @NonNull ByteBuf content) {
-            if (responseDone) {
+        private void writeFull(HttpResponse response, ByteBuf content) {
+            if (finished) {
+                content.release();
+                return;
+            } else if (reset) {
                 // stream closed
                 content.release();
+                finish();
                 return;
             }
             if (!ctx.executor().inEventLoop()) {
@@ -404,7 +422,7 @@ abstract class MultiplexedServerHandler {
             flush();
         }
 
-        private ChannelPromise endPromise(@NonNull HttpResponse response) {
+        private ChannelPromise endPromise(HttpResponse response) {
             if (jfrEvent == null) {
                 return ctx.voidPromise();
             }

@@ -19,7 +19,6 @@ import io.micronaut.context.env.Environment;
 import io.micronaut.core.annotation.AnnotationMetadata;
 import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.Internal;
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.ObjectUtils;
@@ -62,7 +61,7 @@ class DefaultMethodInjectionPoint<B, T> implements MethodInjectionPoint<B, T>, E
         BeanDefinition<B> declaringBean,
         Class<?> declaringType,
         String methodName,
-        @Nullable Argument<?>[] arguments,
+        Argument<?> @Nullable [] arguments,
         @Nullable AnnotationMetadata annotationMetadata) {
         Objects.requireNonNull(declaringBean, "Declaring bean cannot be null");
         this.declaringType = declaringType;
@@ -105,19 +104,16 @@ class DefaultMethodInjectionPoint<B, T> implements MethodInjectionPoint<B, T>, E
     }
 
     @Override
-    @NonNull
     public AnnotationMetadata getAnnotationMetadata() {
         return annotationMetadata;
     }
 
     @Override
-    @NonNull
     public BeanDefinition<B> getDeclaringBean() {
         return declaringBean;
     }
 
     @Override
-    @NonNull
     public Argument<?>[] getArguments() {
         return arguments;
     }

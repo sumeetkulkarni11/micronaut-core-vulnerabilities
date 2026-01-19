@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 package io.micronaut.http.server.netty;
-
-import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import io.micronaut.core.naming.Named;
 import io.micronaut.core.util.SupplierUtil;
@@ -337,7 +335,7 @@ final class HttpPipelineBuilder {
                 .tokenHandler(QuicTokenHandlerImpl.create(channel.alloc()))
                 .handler(new ChannelInitializer<Channel>() {
                     @Override
-                    protected void initChannel(@NonNull Channel ch) throws Exception {
+                    protected void initChannel(Channel ch) throws Exception {
                         if (shuttingDown.get()) {
                             ch.close();
                             return;
@@ -347,7 +345,7 @@ final class HttpPipelineBuilder {
                         insertPcapLoggingHandler(ch, "quic-decapsulated");
                         Http3ServerConnectionHandler connectionHandler = new Http3ServerConnectionHandler(new ChannelInitializer<QuicStreamChannel>() {
                             @Override
-                            protected void initChannel(@NonNull QuicStreamChannel ch) throws Exception {
+                            protected void initChannel(QuicStreamChannel ch) throws Exception {
                                 while (true) {
                                     long m = maxStreamId.get();
                                     if (m >= ch.streamId() || maxStreamId.compareAndSet(m, ch.streamId())) {
@@ -361,7 +359,7 @@ final class HttpPipelineBuilder {
                             }
                         }, new ChannelInitializer<QuicStreamChannel>() {
                             @Override
-                            protected void initChannel(@NonNull QuicStreamChannel ch) throws Exception {
+                            protected void initChannel(QuicStreamChannel ch) throws Exception {
                             }
                         }, null, null, true);
 
@@ -374,7 +372,7 @@ final class HttpPipelineBuilder {
                 .build());
             specificGracefulShutdown = new GracefulShutdownCapable() {
                 @Override
-                public @NonNull CompletionStage<?> shutdownGracefully() {
+                public CompletionStage<?> shutdownGracefully() {
                     shuttingDown.set(true);
                     return GracefulShutdownCapable.shutdownAll(activeChannels.stream());
                 }
@@ -474,6 +472,7 @@ final class HttpPipelineBuilder {
 
         private Http2ConnectionHandler createHttp2ServerHandler(boolean ssl) {
             Http2ServerHandler.ConnectionHandlerBuilder builder = new Http2ServerHandler.ConnectionHandlerBuilder(makeRequestHandler(embeddedServices.getWebSocketUpgradeHandler(server), ssl))
+                .decompress(server.getServerConfiguration().isRequestDecompressionEnabled())
                 .compressor(embeddedServices.getHttpCompressionStrategy())
                 .bodySizeLimits(bodySizeLimits())
                 .accessLogManagerFactory(accessLogManagerFactory)
@@ -547,7 +546,7 @@ final class HttpPipelineBuilder {
                 connectionHandler = frameCodec;
                 multiplexHandler = new Http2MultiplexHandler(new ChannelInitializer<Http2StreamChannel>() {
                     @Override
-                    protected void initChannel(@NonNull Http2StreamChannel ch) {
+                    protected void initChannel(Http2StreamChannel ch) {
                         StreamPipeline streamPipeline = new StreamPipeline(ch, sslHandler, connectionCustomizer.specializeForChannel(ch, NettyServerCustomizer.ChannelRole.REQUEST_STREAM));
                         streamPipeline.insertHttp2FrameHandlers();
                         streamPipeline.streamCustomizer.onStreamPipelineBuilt();
@@ -598,7 +597,7 @@ final class HttpPipelineBuilder {
             );
             ChannelHandler priorKnowledgeHandler = frameCodec == null ? connectionHandler : new ChannelInitializer<>() {
                 @Override
-                protected void initChannel(@NonNull Channel ch) {
+                protected void initChannel(Channel ch) {
                     ch.pipeline().addLast(connectionHandler, multiplexHandler);
                 }
             };
@@ -634,11 +633,10 @@ final class HttpPipelineBuilder {
             connectionCustomizer.onInitialPipelineBuilt();
         }
 
-        @NonNull
         private Http2MultiplexHandler makeHttp2Handler() {
             return new Http2MultiplexHandler(new ChannelInitializer<Channel>() {
                 @Override
-                protected void initChannel(@NonNull Channel ch) {
+                protected void initChannel(Channel ch) {
                     StreamPipeline streamPipeline = new StreamPipeline(ch, sslHandler, connectionCustomizer.specializeForChannel(ch, NettyServerCustomizer.ChannelRole.REQUEST_STREAM));
                     streamPipeline.insertHttp2FrameHandlers();
                     streamPipeline.streamCustomizer.onStreamPipelineBuilt();
@@ -646,7 +644,6 @@ final class HttpPipelineBuilder {
             });
         }
 
-        @NonNull
         private HttpServerCodec createServerCodec() {
             return new HttpServerCodec(
                     server.getServerConfiguration().getMaxInitialLineLength(),
