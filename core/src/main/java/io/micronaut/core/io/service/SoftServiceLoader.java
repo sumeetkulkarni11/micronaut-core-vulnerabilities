@@ -179,6 +179,10 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
             String name) {
         ServiceCollector<S> collector = newCollector(name, condition, classLoader, className -> {
             try {
+                // Validate class name to prevent unsafe reflection
+                if (!isValidClassName(className)) {
+                    return null;
+                }
                 @SuppressWarnings("unchecked") final Class<S> loadedClass =
                         (Class<S>) Class.forName(className, false, classLoader);
                 // MethodHandler should more performant than the basic reflection
@@ -246,6 +250,10 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
                 List<ServiceDefinition<S>> serviceDefinitions = new ArrayList<>();
                 newCollector(serviceType.getName(), condition, classLoader, name -> {
                     try {
+                        // Validate class name to prevent unsafe reflection
+                        if (!isValidClassName(name)) {
+                            return createService(name, null);
+                        }
                         @SuppressWarnings("unchecked")
                         final Class<S> loadedClass = (Class<S>) Class.forName(name, false, classLoader);
                         return createService(name, loadedClass);
@@ -267,6 +275,57 @@ public final class SoftServiceLoader<S> implements Iterable<ServiceDefinition<S>
      */
     private ServiceDefinition<S> createService(String name, @Nullable Class<S> loadedClass) {
         return new DefaultServiceDefinition<>(name, loadedClass);
+    }
+
+    /**
+     * Validates that a class name follows proper Java naming conventions and is safe to load.
+     * This prevents potential security issues from malicious class names.
+     *
+     * @param className The class name to validate
+     * @return true if the class name is valid and safe, false otherwise
+     */
+    private static boolean isValidClassName(String className) {
+        if (className == null || className.trim().isEmpty()) {
+            return false;
+        }
+        
+        // Basic length check to prevent excessively long class names
+        if (className.length() > 512) {
+            return false;
+        }
+        
+        // Check for valid Java identifier characters and structure
+        String[] parts = className.split("\\.");
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                return false;
+            }
+            // Check if each part is a valid Java identifier
+            if (!Character.isJavaIdentifierStart(part.charAt(0))) {
+                return false;
+            }
+            for (int i = 1; i < part.length(); i++) {
+                if (!Character.isJavaIdentifierPart(part.charAt(i))) {
+                    return false;
+                }
+            }
+        }
+        
+        // Additional safety checks to prevent known dangerous patterns
+        String lowerClassName = className.toLowerCase();
+        
+        // Block potentially dangerous classes that could be used for attacks
+        if (lowerClassName.contains("runtime") && lowerClassName.contains("exec")) {
+            return false;
+        }
+        if (lowerClassName.contains("processbuilder")) {
+            return false;
+        }
+        if (lowerClassName.contains("script") && lowerClassName.contains("engine")) {
+            return false;
+        }
+        
+        return true;
     }
 
     public static <S> ServiceCollector<S> newCollector(String serviceName,
