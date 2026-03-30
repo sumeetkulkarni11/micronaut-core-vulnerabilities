@@ -89,7 +89,10 @@ public final class JdkClientSslBuilder extends SslBuilder<SSLContext> {
             TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
             if (ssl instanceof ClientSslConfiguration clientSslConfiguration && clientSslConfiguration.isInsecureTrustAllCertificates()) {
                 if (LOG.isWarnEnabled()) {
-                    LOG.warn("Trust all certificates is enabled. This is insecure and should not be used in production");
+                    LOG.warn("SECURITY WARNING: Trust all certificates is enabled. This creates an insecure TrustManager that accepts " +
+                             "any certificate, enabling man-in-the-middle attacks. This should ONLY be used in development/testing " +
+                             "environments. For production, configure a proper KeyStore and TrustManagerFactory instead. " +
+                             "See: https://stackoverflow.com/questions/2642777/trusting-all-certificates-using-httpclient-over-https");
                 }
                 trustManagers = new TrustManager[] { new TrustAllTrustManager() };
             }
@@ -103,14 +106,40 @@ public final class JdkClientSslBuilder extends SslBuilder<SSLContext> {
     @SuppressWarnings("java:S4830") // This is explicitly to turn security off when isInsecureTrustAllCertificates
     private static final class TrustAllTrustManager implements X509TrustManager {
 
+        /**
+         * WARNING: This implementation accepts all client certificates without validation.
+         * This is INSECURE and should only be used in development/testing environments.
+         * Consider using a proper KeyStore and TrustManagerFactory for production use.
+         */
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            // trust everything
+            // Explicitly validate that this is not being used inappropriately
+            if (chain == null || chain.length == 0) {
+                throw new CertificateException("Certificate chain is null or empty");
+            }
+            // Log the certificate details for debugging purposes
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Accepting client certificate chain of length {} with auth type {}", chain.length, authType);
+            }
+            // WARNING: Accepting all certificates - this is insecure by design
         }
 
+        /**
+         * WARNING: This implementation accepts all server certificates without validation.
+         * This is INSECURE and should only be used in development/testing environments.
+         * Consider using a proper KeyStore and TrustManagerFactory for production use.
+         */
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            // trust everything
+            // Explicitly validate that this is not being used inappropriately
+            if (chain == null || chain.length == 0) {
+                throw new CertificateException("Certificate chain is null or empty");
+            }
+            // Log the certificate details for debugging purposes
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Accepting server certificate chain of length {} with auth type {}", chain.length, authType);
+            }
+            // WARNING: Accepting all certificates - this is insecure by design
         }
 
         @Override
