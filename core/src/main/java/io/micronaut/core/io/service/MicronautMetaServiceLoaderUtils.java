@@ -184,6 +184,11 @@ public final class MicronautMetaServiceLoaderUtils {
     @Nullable
     private static <S> S instantiate(String className, ClassLoader classLoader) {
         try {
+            // Validate class name to prevent loading potentially dangerous classes
+            if (!isValidServiceClassName(className)) {
+                return null;
+            }
+            
             @SuppressWarnings("unchecked") final Class<S> loadedClass =
                 (Class<S>) Class.forName(className, false, classLoader);
             // MethodHandler should more performant than the basic reflection
@@ -195,6 +200,51 @@ public final class MicronautMetaServiceLoaderUtils {
         } catch (Throwable e) {
             return sneakyThrow(e);
         }
+    }
+
+    /**
+     * Validates that the class name is safe for instantiation as a service.
+     * This prevents loading of potentially dangerous classes that could be exploited.
+     *
+     * @param className the class name to validate
+     * @return true if the class name is valid for service instantiation
+     */
+    private static boolean isValidServiceClassName(String className) {
+        if (className == null || className.isEmpty()) {
+            return false;
+        }
+        
+        // Reject class names that could be used for malicious purposes
+        // Block common dangerous classes and packages
+        String[] blockedPrefixes = {
+            "java.lang.Runtime",
+            "java.lang.ProcessBuilder",
+            "java.io.File",
+            "java.nio.file.",
+            "javax.script.",
+            "sun.",
+            "com.sun.",
+            "jdk.internal."
+        };
+        
+        for (String blockedPrefix : blockedPrefixes) {
+            if (className.startsWith(blockedPrefix)) {
+                return false;
+            }
+        }
+        
+        // Ensure the class name follows Java naming conventions
+        // Must contain at least one dot (package separator)
+        if (!className.contains(".")) {
+            return false;
+        }
+        
+        // Reject names with suspicious patterns
+        if (className.contains("..") || className.startsWith(".") || className.endsWith(".")) {
+            return false;
+        }
+        
+        return true;
     }
 
     private static <T extends Throwable, R> R sneakyThrow(Throwable t) throws T {
