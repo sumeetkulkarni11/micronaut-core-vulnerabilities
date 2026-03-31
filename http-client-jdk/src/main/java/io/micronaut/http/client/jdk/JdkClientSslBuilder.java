@@ -89,7 +89,7 @@ public final class JdkClientSslBuilder extends SslBuilder<SSLContext> {
             TrustManager[] trustManagers = trustManagerFactory.getTrustManagers();
             if (ssl instanceof ClientSslConfiguration clientSslConfiguration && clientSslConfiguration.isInsecureTrustAllCertificates()) {
                 if (LOG.isWarnEnabled()) {
-                    LOG.warn("Trust all certificates is enabled. This is insecure and should not be used in production");
+                    LOG.warn("SECURITY WARNING: Trust all certificates is enabled. This completely disables SSL/TLS certificate validation and makes connections vulnerable to man-in-the-middle attacks. This should ONLY be used in testing environments and NEVER in production. Consider configuring a proper trust store instead.");
                 }
                 trustManagers = new TrustManager[] { new TrustAllTrustManager() };
             }
@@ -105,12 +105,30 @@ public final class JdkClientSslBuilder extends SslBuilder<SSLContext> {
 
         @Override
         public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            // trust everything
+            // Validate input parameters to prevent null pointer exceptions
+            if (chain == null || chain.length == 0) {
+                throw new CertificateException("Certificate chain is null or empty");
+            }
+            if (authType == null || authType.trim().isEmpty()) {
+                throw new CertificateException("Authentication type is null or empty");
+            }
+            // When insecure trust all is enabled, certificates are accepted without validation
+            // This should only be used in testing environments
+            LOG.debug("Client certificate validation bypassed due to insecure trust all configuration");
         }
 
         @Override
         public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
-            // trust everything
+            // Validate input parameters to prevent null pointer exceptions
+            if (chain == null || chain.length == 0) {
+                throw new CertificateException("Certificate chain is null or empty");
+            }
+            if (authType == null || authType.trim().isEmpty()) {
+                throw new CertificateException("Authentication type is null or empty");
+            }
+            // When insecure trust all is enabled, certificates are accepted without validation
+            // This should only be used in testing environments
+            LOG.debug("Server certificate validation bypassed due to insecure trust all configuration");
         }
 
         @Override
