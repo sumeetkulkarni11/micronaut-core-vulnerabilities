@@ -33,6 +33,37 @@ public final class ByteCodeWriterUtils {
     }
 
     /**
+     * Validates and normalizes a class name for safe use with Class.forName().
+     * This prevents unsafe reflection attacks by ensuring the class name follows
+     * proper Java naming conventions.
+     *
+     * @param internalName The class name in internal format (with '/' separators)
+     * @return The validated class name in dot notation
+     * @throws IllegalArgumentException if the class name is invalid
+     */
+    private static String validateAndNormalizeClassName(String internalName) {
+        if (internalName == null || internalName.isEmpty()) {
+            throw new IllegalArgumentException("Class name cannot be null or empty");
+        }
+        
+        // Convert internal format to dot notation
+        String className = internalName.replace('/', '.');
+        
+        // Validate that it contains only valid Java identifier characters
+        // Allow letters, digits, dots, underscores, and dollar signs (for inner classes)
+        if (!className.matches("^[a-zA-Z_$][a-zA-Z0-9_$.]*$")) {
+            throw new IllegalArgumentException("Invalid class name format: " + className);
+        }
+        
+        // Additional check: ensure no consecutive dots or leading/trailing dots
+        if (className.contains("..") || className.startsWith(".") || className.endsWith(".")) {
+            throw new IllegalArgumentException("Invalid class name format: " + className);
+        }
+        
+        return className;
+    }
+
+    /**
      * Generate the bytecode.
      *
      * @param objectDef      The object definition
@@ -49,14 +80,16 @@ public final class ByteCodeWriterUtils {
                     ClassLoader classLoader = getClassLoader();
                     Class<?> class1;
                     try {
-                        class1 = Class.forName(type1.replace('/', '.'), false, classLoader);
-                    } catch (ClassNotFoundException e) {
+                        String className1 = validateAndNormalizeClassName(type1);
+                        class1 = Class.forName(className1, false, classLoader);
+                    } catch (ClassNotFoundException | IllegalArgumentException e) {
                         return getCommonSuperClassUsingVisitorContext(type1, type2);
                     }
                     Class<?> class2;
                     try {
-                        class2 = Class.forName(type2.replace('/', '.'), false, classLoader);
-                    } catch (ClassNotFoundException e) {
+                        String className2 = validateAndNormalizeClassName(type2);
+                        class2 = Class.forName(className2, false, classLoader);
+                    } catch (ClassNotFoundException | IllegalArgumentException e) {
                         return getCommonSuperClassUsingVisitorContext(type1, type2);
                     }
                     if (class1.isAssignableFrom(class2)) {
